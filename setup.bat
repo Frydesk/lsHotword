@@ -26,6 +26,8 @@ python -m pip install --upgrade pip
 echo Installing requirements...
 pip install lsHotword
 pip install pip install -e .
+pip install scikit-learn
+pip install ffmpeg
 
 :: Install WebSocket dependencies
 echo Installing WebSocket dependencies...
