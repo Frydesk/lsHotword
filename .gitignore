@@ -1,0 +1,11 @@
+venv/
+examples/data/
+
+lsHotword.code-workspace
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
+*.aac
+*.wma
