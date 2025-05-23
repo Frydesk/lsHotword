@@ -24,7 +24,6 @@ setup(
   keywords = ['hotword', 'detector', 'lshotword','windows','python','wake word','wake-word','detection'],
   install_requires=[
           'matplotlib',
-          'numpy',
           'pydub',
           'pyaudio',
           'tensorflow',

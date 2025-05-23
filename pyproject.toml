@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "lshotword-project"
+version = "0.1.0"
+description = "IsHotWord System"
+authors = ["Your Name <your.email@example.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.8"
+lsHotword = "*"
+scikit-learn = "*"
+numpy = "1.18.5"
+uvicorn = {extras = ["standard"], version = "*"}
+websockets = "*"
+tensorflow = "2.3.0"
+protobuf = "<=3.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-system-backend = "poetry.core.masonry.api" 

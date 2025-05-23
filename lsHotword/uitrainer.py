@@ -327,40 +327,116 @@ class TrainThread(QThread):
             x, y = create_training_example(backgrounds[i % 2], activates, negatives)
             X.append(x.swapaxes(0,1))
             Y.append(y.swapaxes(0,1))
-        X=array([X])
-        X=X[0]
-        Y=array([Y])
-        Y=Y[0]
-        print(X.shape)
-        print(X.ndim)
-        print(Y.shape)
-        print(Y.ndim)
-        self.output_log.emit("Data loaded successfully...")
-        self.output_log.emit("Shape of X= "+str(X.shape))
-        self.output_log.emit("Shape of Y= "+str(Y.shape))
-        npsave('./X.npy',X)
-        npsave('./Y.npy',Y)
-        print("Successfull!!")
-        self.output_log.emit("X.npy and Y.npy saved...")
+        
+        # Convert lists to numpy arrays with proper dtype and validation
+        X = np.array(X, dtype=np.float32)
+        Y = np.array(Y, dtype=np.float32)
+        
+        # Check for invalid values
         try:
-            assert X.ndim == 3, "Error: X not have correct dimentions"
-            assert Y.ndim == 3, "Error: Y not have correct dimentions"
-            assert Y.shape[1] == Ty, "Error: Y not have correct dimentions"
-            assert X.shape[1] == self.Tx, "Error: X not have correct dimentions"
+            assert X.ndim == 3, "Error: X not have correct dimensions"
+            assert Y.ndim == 3, "Error: Y not have correct dimensions"
+            assert Y.shape[1] == Ty, "Error: Y not have correct dimensions"
+            assert X.shape[1] == self.Tx, "Error: X not have correct dimensions"
+            assert not np.isnan(X).any(), "Error: X contains NaN values"
+            assert not np.isinf(X).any(), "Error: X contains infinite values"
+            assert np.all((Y == 0) | (Y == 1)), "Error: Y contains values other than 0 and 1"
         except Exception as e:
             print(e)
             self.output_log.emit(str(e))
-        X_train,X_test,Y_train,Y_test = train_test_split(X,Y,test_size=0.2,random_state=37)
-        model = ht.Hmodel(input_shape = (self.Tx, self.n_freq))
+            return
+            
+        # Normalize X if needed (audio spectrograms should be normalized)
+        X = (X - np.mean(X)) / (np.std(X) + 1e-8)
+        
+        # Ensure Y contains only 0s and 1s
+        Y = np.clip(Y, 0, 1)
+        
+        # Print shapes and data statistics for debugging
+        print("X shape:", X.shape)
+        print("X dtype:", X.dtype)
+        print("X min:", np.min(X))
+        print("X max:", np.max(X))
+        print("Y shape:", Y.shape)
+        print("Y dtype:", Y.dtype)
+        print("Unique values in Y:", np.unique(Y))
+        
+        self.output_log.emit("Data loaded successfully...")
+        self.output_log.emit("Shape of X= "+str(X.shape))
+        self.output_log.emit("Shape of Y= "+str(Y.shape))
+        
+        # Save the preprocessed data
+        np.save('./X.npy', X)
+        np.save('./Y.npy', Y)
+        print("Successfully saved preprocessed data!")
+        self.output_log.emit("X.npy and Y.npy saved...")
+        
+        # Split data and create model
+        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=37)
+        model = ht.Hmodel(input_shape=(self.Tx, self.n_freq))
         model.summary()
-        opt = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, decay=0.01)
+        opt = Adam(learning_rate=0.0001, beta_1=0.9, beta_2=0.999, decay=0.01)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=["accuracy"])
         self.output_log.emit("Starting to train model with {} epochs...".format(self.epochs))
-        model.fit(X,Y,batch_size=self.batch_size,epochs=self.epochs,callbacks=callbacks)
+        
+        # Remove the original X and Y to ensure we don't accidentally use them
+        del X
+        del Y
+        
+        try:
+            import tensorflow as tf
+            
+            # Convert numpy arrays to float32 explicitly before tensor conversion
+            X_train = np.asarray(X_train).astype(np.float32)
+            Y_train = np.asarray(Y_train).astype(np.float32)
+            X_test = np.asarray(X_test).astype(np.float32)
+            Y_test = np.asarray(Y_test).astype(np.float32)
+            
+            # Now convert to tensors
+            X_train = tf.convert_to_tensor(X_train)
+            Y_train = tf.convert_to_tensor(Y_train)
+            X_test = tf.convert_to_tensor(X_test)
+            Y_test = tf.convert_to_tensor(Y_test)
+            
+            print("Training data shapes after conversion:")
+            print("X_train tensor shape:", X_train.shape)
+            print("Y_train tensor shape:", Y_train.shape)
+            
+            # Create TensorFlow Dataset
+            train_dataset = tf.data.Dataset.from_tensor_slices((X_train, Y_train))
+            train_dataset = train_dataset.shuffle(buffer_size=1000).batch(self.batch_size)
+            
+            # Create validation dataset
+            val_dataset = tf.data.Dataset.from_tensor_slices((X_test, Y_test))
+            val_dataset = val_dataset.batch(self.batch_size)
+            
+            # Verify dataset shapes
+            for x_batch, y_batch in train_dataset.take(1):
+                print("Sample batch shapes:")
+                print("X batch shape:", x_batch.shape)
+                print("Y batch shape:", y_batch.shape)
+                
+            # Train the model using the dataset API
+            self.output_log.emit("Starting training with tf.data.Dataset...")
+            history = model.fit(
+                train_dataset,
+                validation_data=val_dataset,
+                epochs=self.epochs,
+                callbacks=callbacks,
+                verbose=1
+            )
+            
+        except Exception as e:
+            print("Error during training:", str(e))
+            self.output_log.emit("Error during training: " + str(e))
+            import traceback
+            traceback.print_exc()
+            return
+            
         self.output_log.emit("Model Trained Successfully...")
-        model.save(os.path.join(self.outPath,"model.h5"))
-        print("Model Saved !",os.path.join(self.outPath,"model.h5"))
-        self.output_log.emit("Model Saved -> "+str(os.path.join(self.outPath,"model.h5")))
+        model.save(os.path.join(self.outPath, "model.h5"))
+        print("Model Saved!", os.path.join(self.outPath, "model.h5"))
+        self.output_log.emit("Model Saved -> " + str(os.path.join(self.outPath, "model.h5")))
 
 class Ui_lsForm(object):
     def setupUi(self, lsForm):
