@@ -1,5 +1,6 @@
 venv/
 examples/data/
+python/
 
 lsHotword.code-workspace
 *.wav
@@ -9,3 +10,6 @@ lsHotword.code-workspace
 *.flac
 *.aac
 *.wma
+
+X.npy
+y.npy
