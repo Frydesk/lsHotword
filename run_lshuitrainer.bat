@@ -1,4 +1,5 @@
 @echo off
-REM Activate Poetry virtual environment and run lshUITrainer
-powershell -Command "Invoke-Expression (poetry env activate) ; lshuitrainer"
+REM Activate uv virtual environment and run lshUITrainer
+call .venv\Scripts\activate.bat
+lshuitrainer
 pause 

@@ -1,20 +1,41 @@
-[tool.poetry]
-name = "lshotword-project"
-version = "0.1.0"
-description = "IsHotWord System"
-authors = ["Your Name <your.email@example.com>"]
-package-mode = false
+[project]
+name = "lsHotword"
+version = "1.2.4"
+description = "Hotword/Wake Word detection in python for all platforms(Windows/Linux/Mac)."
+authors = [
+    {name = "Hemant Kumar", email = "iamhemantindia@protonmail.com"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+keywords = ["hotword", "detector", "lshotword", "windows", "python", "wake word", "wake-word", "detection"]
+dependencies = [
+    "matplotlib",
+    "pydub",
+    "pyaudio",
+    "tensorflow",
+    "scipy",
+    "pyqt6",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.8,<3.9"
-lsHotword = "*"
-scikit-learn = "*"
-numpy = "1.18.5"
-uvicorn = {extras = ["standard"], version = "*"}
-websockets = "*"
-tensorflow = "2.19.0"
-protobuf = "<=3.20.0"
+[project.scripts]
+lshTrainer = "lsHotword.funcHTrainer:main"
+lshDatagen = "lsHotword.funcHDatagen:main"
+lshTestModel = "lsHotword.ls:HTest"
+lshUITrainer = "lsHotword.uitrainer:main"
+lshModelTrainer = "lsHotword.funcHfTrainModel:main"
+
+[project.urls]
+Homepage = "https://github.com/HemantKArya/lsHotword"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api" 
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lsHotword"]
+
+[tool.hatch.build]
+include = [
+    "lsHotword/*.wav",
+] 
